@@ -44,14 +44,19 @@ const AdminDashboard = () => {
         setModulesLoading(false);
     };
 
+    const [saving, setSaving] = useState(false);
+
     const handleSave = async (e) => {
         if (e) e.preventDefault();
+        console.log("Create/Update Process Initiated");
 
         // Basic Validation
         if (!formData.title || !formData.slug) {
             alert("Title and Slug are required!");
             return;
         }
+
+        setSaving(true);
 
         const formattedData = {
             ...formData,
@@ -64,24 +69,33 @@ const AdminDashboard = () => {
         const { id, ...dataToSave } = formattedData;
 
         try {
-            let error;
+            console.log("Sending data to Supabase...", dataToSave);
+
+            // Timeout Promise
+            const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Request timed out (10s)")), 10000));
+
+            let opPromise;
             if (id) {
                 // Update existing
-                const result = await supabase.from('modules').update(dataToSave).eq('id', id);
-                error = result.error;
+                opPromise = supabase.from('modules').update(dataToSave).eq('id', id);
             } else {
                 // Insert new
-                const result = await supabase.from('modules').insert([dataToSave]);
-                error = result.error;
+                opPromise = supabase.from('modules').insert([dataToSave]);
             }
 
-            if (error) throw error;
+            // Race against timeout
+            const result = await Promise.race([opPromise, timeout]);
 
+            if (result.error) throw result.error;
+
+            console.log("Save Success!", result);
             alert("Project Saved Successfully! 🚀");
             finalizeSave();
         } catch (err) {
-            console.error("Save Error:", err);
+            console.error("Save Fatal Error:", err);
             alert(`Error Saving: ${err.message}`);
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -331,9 +345,11 @@ const AdminDashboard = () => {
                         <div className="p-6 border-t border-slate-800 bg-slate-950/50 rounded-b-3xl">
                             <button
                                 onClick={handleSave}
-                                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg active:scale-[0.98] uppercase tracking-widest text-xs flex items-center justify-center gap-2"
+                                disabled={saving}
+                                className={`w-full ${saving ? 'bg-blue-800' : 'bg-blue-600 hover:bg-blue-500'} text-white font-bold py-4 rounded-xl transition-all shadow-lg active:scale-[0.98] uppercase tracking-widest text-xs flex items-center justify-center gap-2`}
                             >
-                                <Save size={18} /> Save & Publish
+                                {saving ? <Loader2 className="animate-spin" /> : <Save size={18} />}
+                                {saving ? 'Saving to Core...' : 'Save & Publish'}
                             </button>
                         </div>
                     </motion.div>
