@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from '../lib/supabase';
+import { Loader2 } from 'lucide-react';
 
 const AuthContext = createContext();
 
@@ -63,7 +64,49 @@ export const AuthProvider = ({ children }) => {
         };
     }, []);
 
-    // ... fetchProfile, signIn, etc ...
+    const fetchProfile = async (userId) => {
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', userId)
+                .single();
+
+            if (error && error.code !== 'PGRST116') {
+                console.error('Error fetching profile:', error);
+            }
+
+            setProfile(data);
+        } catch (error) {
+            console.error('Error:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const signIn = async (email, password) => {
+        return supabase.auth.signInWithPassword({ email, password });
+    };
+
+    const signUp = async (email, password, username) => {
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+        });
+
+        if (error) return { error };
+
+        if (data.user) {
+            const { error: profileError } = await supabase.from('profiles').insert([
+                { id: data.user.id, username, role: 'user' }
+            ]);
+            if (profileError) console.error("Error creating profile:", profileError);
+        }
+
+        return { data, error };
+    };
+
+    const signOut = () => supabase.auth.signOut();
 
     return (
         <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut }}>
