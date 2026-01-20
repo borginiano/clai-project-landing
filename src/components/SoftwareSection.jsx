@@ -1,7 +1,4 @@
-import React from 'react';
-import { Film, Theater, BookOpen, Cpu, Sparkles, ShoppingBag } from 'lucide-react';
-import { LINKS } from '../constants';
-import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 const SoftwareSection = () => {
     return (
@@ -24,7 +21,14 @@ const SoftwareSection = () => {
                     <p className="text-sm text-slate-400 mb-8 italic font-sans font-light leading-relaxed">
                         Prueba la potencia de nuestra herramienta nativa para autores profesionales en tu propia workstation.
                     </p>
-                    <a href={LINKS.gumroad} target="_blank" rel="noreferrer" className="inline-flex items-center gap-3 bg-white text-slate-950 px-10 py-4 rounded-2xl font-bold text-sm hover:bg-slate-200 transition-all shadow-xl uppercase tracking-widest w-full justify-center active:scale-95 font-mono">Obtener Licencia <ShoppingBag size={18} /></a>
+                    <div className="flex flex-col gap-3">
+                        <Link to="/project/cl-guionista" className="inline-flex items-center justify-center gap-3 bg-blue-600 text-white px-10 py-4 rounded-2xl font-bold text-sm hover:bg-blue-500 transition-all shadow-xl shadow-blue-900/20 uppercase tracking-widest w-full active:scale-95 font-mono">
+                            Ver Descripción / Demo <Cpu size={18} />
+                        </Link>
+                        <a href={LINKS.gumroad} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-3 bg-white text-slate-950 px-10 py-4 rounded-2xl font-bold text-sm hover:bg-slate-200 transition-all shadow-xl uppercase tracking-widest w-full active:scale-95 font-mono">
+                            Obtener Licencia <ShoppingBag size={18} />
+                        </a>
+                    </div>
                 </motion.div>
 
                 <motion.div
