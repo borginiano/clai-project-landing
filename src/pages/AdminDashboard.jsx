@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { LayoutGrid, Plus, Trash2, Edit, Save, X, Loader2, LogOut } from 'lucide-react';
+import { LayoutGrid, Plus, Trash2, Edit, Save, X, Loader2, LogOut, Copy, RefreshCw, Eye } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const AdminDashboard = () => {
-    const { user, profile, loading: authLoading, signOut } = useAuth(); // Import loading from AuthContext
+    const { user, profile, loading: authLoading, signOut } = useAuth();
     const navigate = useNavigate();
     const [modules, setModules] = useState([]);
     const [modulesLoading, setModulesLoading] = useState(true);
@@ -15,11 +15,16 @@ const AdminDashboard = () => {
     // Form State
     const [formData, setFormData] = useState({
         title: '',
+        slug: '',
         description: '',
+        content: '', // Rich markdown content
         status: 'dev',
         url: '',
         image_url: '',
-        tags: ''
+        video_url: '', // Video
+        gallery: '',   // Comma separated images
+        tags: '',
+        features: ''   // list of features
     });
 
     useEffect(() => {
@@ -41,18 +46,63 @@ const AdminDashboard = () => {
 
     const handleSave = async (e) => {
         e.preventDefault();
+
+        // Parse complex fields
         const formattedData = {
             ...formData,
-            tags: formData.tags.split(',').map(tag => tag.trim())
+            tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : [],
+            gallery: formData.gallery ? formData.gallery.split(',').map(img => img.trim()) : [],
+            features: formData.features ? formData.features.split('\n').filter(f => f.trim() !== '') : [] // Split by newline
         };
 
-        const { error } = await supabase.from('modules').insert([formattedData]);
-        if (error) alert(error.message);
-        else {
-            setFormData({ title: '', description: '', status: 'dev', url: '', image_url: '', tags: '' });
-            setIsEditing(false);
-            fetchModules();
+        const { error } = await supabase.from('modules').upsert([formattedData]); // upsert to handle updates if id matches (though here we might be inserting new always if no ID, wait upsert needs primary key)
+
+        // Correct Upsert Logic: Check if we are updating (by title or slug? no unique ID is best). 
+        // For simple Admin MVP, let's just use INSERT for NEW and DELETE/RE-INSERT or separate UPDATE for edit. 
+        // But to keep it simple with the previous logic:
+
+        // LET'S IMPROVE: If editing existing, we need ID.
+        // For now, let's assume we are creating NEW only in this form version or overwriting based on ID if we added it to state.
+        // Actually, the previous version only did INSERT. I will stick to INSERT for now but add ID to formData if I was editing (which I haven't implemented "Edit" button yet, only "Add").
+        // Wait, I see "Edit" icon in import but not used. I will implement Edit functionality now.
+
+        if (formData.id) {
+            const { error } = await supabase.from('modules').update(formattedData).eq('id', formData.id);
+            if (error) alert(error.message);
+            else finalizeSave();
+        } else {
+            const { id, ...insertData } = formattedData; // Remove undefined ID
+            const { error } = await supabase.from('modules').insert([insertData]);
+            if (error) alert(error.message);
+            else finalizeSave();
         }
+    };
+
+    const finalizeSave = () => {
+        setFormData({
+            title: '', slug: '', description: '', content: '', status: 'dev',
+            url: '', image_url: '', video_url: '', gallery: '', tags: '', features: ''
+        });
+        setIsEditing(false);
+        fetchModules();
+    };
+
+    const handleEditClick = (module) => {
+        setFormData({
+            id: module.id,
+            title: module.title,
+            slug: module.slug || '',
+            description: module.description || '',
+            content: module.content || '',
+            status: module.status,
+            url: module.url || '',
+            image_url: module.image_url || '',
+            video_url: module.video_url || '',
+            gallery: module.gallery ? module.gallery.join(', ') : '',
+            tags: module.tags ? module.tags.join(', ') : '',
+            features: module.features ? module.features.join('\n') : ''
+        });
+        setIsEditing(true);
     };
 
     const handleDelete = async (id) => {
@@ -62,17 +112,20 @@ const AdminDashboard = () => {
         else fetchModules();
     };
 
+    const generateSlug = () => {
+        const slug = formData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+        setFormData({ ...formData, slug });
+    };
+
     const handleSignOut = async () => {
         await signOut();
         navigate('/');
     };
 
-    // Show loading if Auth is loading or Modules are loading (initially)
     if (authLoading || (modulesLoading && user && profile?.role === 'admin')) {
         return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white"><Loader2 className="animate-spin" /></div>;
     }
 
-    // If still here after loading and no admin, return null (redirection will handle it, but preventing flash)
     if (!user || profile?.role !== 'admin') return null;
 
     return (
@@ -83,7 +136,7 @@ const AdminDashboard = () => {
                     <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg">AD</div>
                         <div>
-                            <h1 className="text-xl font-bold text-white tracking-tight uppercase">Admin Panel</h1>
+                            <h1 className="text-xl font-bold text-white tracking-tight uppercase">Franky Engine</h1>
                             <p className="text-[10px] text-slate-400 font-mono tracking-widest">Logged as: {profile?.username || user?.email}</p>
                         </div>
                     </div>
@@ -93,12 +146,18 @@ const AdminDashboard = () => {
 
             <main className="max-w-7xl mx-auto p-6">
                 <div className="flex justify-between items-center mb-8">
-                    <h2 className="text-2xl font-bold text-white flex items-center gap-2"><LayoutGrid className="text-blue-500" /> Deployment Modules</h2>
+                    <h2 className="text-2xl font-bold text-white flex items-center gap-2"><LayoutGrid className="text-blue-500" /> Active Modules</h2>
                     <button
-                        onClick={() => setIsEditing(true)}
+                        onClick={() => {
+                            setFormData({
+                                title: '', slug: '', description: '', content: '', status: 'dev',
+                                url: '', image_url: '', video_url: '', gallery: '', tags: '', features: ''
+                            });
+                            setIsEditing(true);
+                        }}
                         className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg"
                     >
-                        <Plus size={16} /> Add Module
+                        <Plus size={16} /> New Project
                     </button>
                 </div>
 
@@ -108,73 +167,168 @@ const AdminDashboard = () => {
                         <motion.div
                             layout
                             key={module.id}
-                            className="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-blue-500/30 transition-all group"
+                            className="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-blue-500/30 transition-all group relative"
                         >
-                            <div className="flex justify-between items-start mb-4">
+                            <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onClick={() => window.open(`/project/${module.slug}`, '_blank')} className="p-2 bg-slate-800 hover:bg-blue-600 rounded-lg text-white transition-colors" title="View Page"><Eye size={14} /></button>
+                                <button onClick={() => handleEditClick(module)} className="p-2 bg-slate-800 hover:bg-yellow-600 rounded-lg text-white transition-colors" title="Edit"><Edit size={14} /></button>
+                                <button onClick={() => handleDelete(module.id)} className="p-2 bg-slate-800 hover:bg-red-600 rounded-lg text-white transition-colors" title="Delete"><Trash2 size={14} /></button>
+                            </div>
+
+                            <div className="mb-4">
                                 <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full border ${module.status === 'live' ? 'border-emerald-500/20 text-emerald-500 bg-emerald-500/10' : 'border-yellow-500/20 text-yellow-500 bg-yellow-500/10'}`}>
                                     {module.status}
                                 </span>
-                                <button onClick={() => handleDelete(module.id)} className="text-slate-600 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
                             </div>
                             <h3 className="text-xl font-bold text-white mb-2">{module.title}</h3>
                             <p className="text-sm text-slate-400 mb-4 line-clamp-2">{module.description}</p>
-                            <div className="flex flex-wrap gap-2 mb-4">
-                                {module.tags?.map(tag => (
-                                    <span key={tag} className="text-[9px] font-mono text-slate-500 bg-slate-950 px-2 py-1 rounded-md border border-slate-800">#{tag}</span>
-                                ))}
-                            </div>
-                            <div className="text-[10px] text-slate-600 font-mono truncate">{module.url}</div>
+                            <div className="text-[10px] text-slate-600 font-mono truncate mb-2">/{module.slug}</div>
                         </motion.div>
                     ))}
                 </div>
             </main>
 
-            {/* Modal */}
+            {/* Franky Editor Modal */}
             {isEditing && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
+                        initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="bg-slate-900 border border-slate-800 p-8 rounded-3xl w-full max-w-lg shadow-2xl"
+                        className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[90vh]"
                     >
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold text-white uppercase">New Module</h3>
-                            <button onClick={() => setIsEditing(false)} className="text-slate-500 hover:text-white"><X size={20} /></button>
+                        <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-950/50 rounded-t-3xl">
+                            <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-2">
+                                <span className="text-blue-500">Franky</span> Editor
+                            </h3>
+                            <button onClick={() => setIsEditing(false)} className="text-slate-500 hover:text-white transition-colors"><X size={24} /></button>
                         </div>
-                        <form onSubmit={handleSave} className="space-y-4">
-                            <input
-                                className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-sm text-white focus:border-blue-500 outline-none"
-                                placeholder="Title"
-                                value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                required
-                            />
-                            <textarea
-                                className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-sm text-white focus:border-blue-500 outline-none resize-none h-24"
-                                placeholder="Description"
-                                value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })}
-                            />
-                            <div className="grid grid-cols-2 gap-4">
-                                <select
-                                    className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-sm text-white focus:border-blue-500 outline-none"
-                                    value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}
-                                >
-                                    <option value="dev">En Desarrollo</option>
-                                    <option value="beta">Beta</option>
-                                    <option value="live">Live</option>
-                                </select>
-                                <input
-                                    className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-sm text-white focus:border-blue-500 outline-none"
-                                    placeholder="URL"
-                                    value={formData.url} onChange={e => setFormData({ ...formData, url: e.target.value })}
-                                />
-                            </div>
-                            <input
-                                className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-sm text-white focus:border-blue-500 outline-none"
-                                placeholder="Tags (comma separated)"
-                                value={formData.tags} onChange={e => setFormData({ ...formData, tags: e.target.value })}
-                            />
-                            <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl mt-4">Save Module</button>
-                        </form>
+
+                        <div className="p-8 overflow-y-auto custom-scrollbar">
+                            <form onSubmit={handleSave} className="space-y-6">
+                                {/* Core Info */}
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Project Title</label>
+                                        <input
+                                            className="w-full bg-slate-950 border border-slate-800 p-4 rounded-xl text-white focus:border-blue-500 outline-none transition-colors"
+                                            placeholder="Ex: OmniMind Core"
+                                            value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex justify-between">
+                                            <span>Slug (URL)</span>
+                                            <button type="button" onClick={generateSlug} className="text-blue-500 hover:text-blue-400 flex items-center gap-1"><RefreshCw size={10} /> Generate</button>
+                                        </label>
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-4 text-slate-600 font-mono text-sm">/</span>
+                                            <input
+                                                className="w-full bg-slate-950 border border-slate-800 p-4 pl-8 rounded-xl text-white focus:border-blue-500 outline-none font-mono text-sm transition-colors"
+                                                placeholder="omnimind-core"
+                                                value={formData.slug} onChange={e => setFormData({ ...formData, slug: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Status & Links */}
+                                <div className="grid md:grid-cols-3 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Status</label>
+                                        <select
+                                            className="w-full bg-slate-950 border border-slate-800 p-4 rounded-xl text-white focus:border-blue-500 outline-none appearance-none"
+                                            value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}
+                                        >
+                                            <option value="dev">Development</option>
+                                            <option value="beta">Beta Access</option>
+                                            <option value="live">Live / Production</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2 md:col-span-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Live URL</label>
+                                        <input
+                                            className="w-full bg-slate-950 border border-slate-800 p-4 rounded-xl text-white focus:border-blue-500 outline-none font-mono text-sm"
+                                            placeholder="https://..."
+                                            value={formData.url} onChange={e => setFormData({ ...formData, url: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Short Desc */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Short Description (Hero)</label>
+                                    <textarea
+                                        className="w-full bg-slate-950 border border-slate-800 p-4 rounded-xl text-white focus:border-blue-500 outline-none resize-none h-24"
+                                        placeholder="Brief hook for the landing card..."
+                                        value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                    />
+                                </div>
+
+                                {/* Rich Content */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex justify-between">
+                                        <span>Full Presentation (Markdown)</span>
+                                        <span className="text-slate-600 text-[10px]">* Supports headers, lists, bold, etc.</span>
+                                    </label>
+                                    <textarea
+                                        className="w-full bg-slate-950 border border-slate-800 p-4 rounded-xl text-white focus:border-blue-500 outline-none resize-none h-64 font-mono text-sm leading-relaxed"
+                                        placeholder="# Main Feature\n\nDescribe the details here..."
+                                        value={formData.content} onChange={e => setFormData({ ...formData, content: e.target.value })}
+                                    />
+                                </div>
+
+                                {/* Media & Meta */}
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Video URL (YouTube/MP4)</label>
+                                        <input
+                                            className="w-full bg-slate-950 border border-slate-800 p-4 rounded-xl text-white focus:border-blue-500 outline-none font-mono text-sm"
+                                            placeholder="https://youtube.com/..."
+                                            value={formData.video_url} onChange={e => setFormData({ ...formData, video_url: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Gallery Images (Comma sep)</label>
+                                        <input
+                                            className="w-full bg-slate-950 border border-slate-800 p-4 rounded-xl text-white focus:border-blue-500 outline-none font-mono text-sm"
+                                            placeholder="url1.jpg, url2.png..."
+                                            value={formData.gallery} onChange={e => setFormData({ ...formData, gallery: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Features List (One per line)</label>
+                                        <textarea
+                                            className="w-full bg-slate-950 border border-slate-800 p-4 rounded-xl text-white focus:border-blue-500 outline-none resize-none h-32 font-mono text-sm"
+                                            placeholder="- Secure Encryption\n- AI Analysis\n- Real-time Sync"
+                                            value={formData.features} onChange={e => setFormData({ ...formData, features: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Tags (Comma sep)</label>
+                                        <input
+                                            className="w-full bg-slate-950 border border-slate-800 p-4 rounded-xl text-white focus:border-blue-500 outline-none font-mono text-sm"
+                                            placeholder="ai, crypto, web3..."
+                                            value={formData.tags} onChange={e => setFormData({ ...formData, tags: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                            </form>
+                        </div>
+
+                        <div className="p-6 border-t border-slate-800 bg-slate-950/50 rounded-b-3xl">
+                            <button
+                                onClick={handleSave}
+                                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg active:scale-[0.98] uppercase tracking-widest text-xs flex items-center justify-center gap-2"
+                            >
+                                <Save size={18} /> Save & Publish
+                            </button>
+                        </div>
                     </motion.div>
                 </div>
             )}
