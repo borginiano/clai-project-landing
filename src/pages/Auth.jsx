@@ -122,6 +122,14 @@ const Auth = () => {
                     >
                         {isLogin ? 'Create New Uplink' : 'Existing Connection?'}
                     </button>
+                    <div className="mt-4">
+                        <button
+                            onClick={() => { localStorage.clear(); window.location.reload(); }}
+                            className="text-red-500/50 hover:text-red-400 text-[10px] font-mono uppercase tracking-widest transition-colors flex items-center justify-center gap-1 mx-auto"
+                        >
+                            <AlertCircle size={10} /> Reset App Data
+                        </button>
+                    </div>
                 </div>
             </motion.div>
         </div>
