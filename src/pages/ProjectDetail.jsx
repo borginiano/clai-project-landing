@@ -12,30 +12,75 @@ const ProjectDetail = () => {
     const [project, setProject] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    const [error, setError] = useState(null);
+
     useEffect(() => {
-        fetchProject();
+        fetchProjectWithRetry();
         window.scrollTo(0, 0);
     }, [slug]);
 
-    const fetchProject = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('modules')
-                .select('*')
-                .eq('slug', slug)
-                .single();
+    const fetchProjectWithRetry = async (retries = 3) => {
+        setLoading(true);
+        setError(null);
 
-            if (error) throw error;
-            setProject(data);
-        } catch (error) {
-            console.error("Error fetching project:", error);
-        } finally {
-            setLoading(false);
+        for (let i = 0; i < retries; i++) {
+            try {
+                // racing against a timeout
+                const timeoutDetails = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 15000));
+
+                const fetchPromise = supabase
+                    .from('modules')
+                    .select('*')
+                    .eq('slug', slug)
+                    .single();
+
+                const { data, error: fetchErr } = await Promise.race([fetchPromise, timeoutDetails]);
+
+                if (fetchErr) throw fetchErr;
+                if (!data) throw new Error("Not Found");
+
+                setProject(data);
+                setLoading(false);
+                return; // Success
+            } catch (err) {
+                console.error(`Attempt ${i + 1} failed:`, err);
+                if (i === retries - 1) {
+                    setError(err.message === "Not Found" ? "Project Not Found" : "Connection Failed. Check your internet.");
+                    setLoading(false);
+                }
+                // wait 1s before retry
+                await new Promise(r => setTimeout(r, 1000));
+            }
         }
     };
 
-    if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white"><Loader2 className="animate-spin" size={40} /></div>;
-    if (!project) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Project not found</div>;
+    if (loading) return (
+        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white gap-4">
+            <Loader2 className="animate-spin text-blue-500" size={40} />
+            <p className="text-sm font-mono text-slate-500 animate-pulse">Establishing Secure Connection...</p>
+        </div>
+    );
+
+    if (error || !project) return (
+        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white gap-6">
+            <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 mb-2">
+                <Layers size={32} />
+            </div>
+            <h2 className="text-2xl font-bold uppercase tracking-widest">{error || "Project Not Found"}</h2>
+            <p className="text-slate-500 max-w-sm text-center mb-4">
+                We couldn't load the module data from the core server. This is likely a network timeout.
+            </p>
+            <button
+                onClick={() => fetchProjectWithRetry()}
+                className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-full font-bold uppercase tracking-widest text-xs transition-all shadow-lg hover:shadow-blue-500/25"
+            >
+                Retry Connection
+            </button>
+            <Link to="/" className="text-slate-600 hover:text-white text-xs font-mono uppercase underline decoration-slate-800 underline-offset-4">
+                Return to Dashboard
+            </Link>
+        </div>
+    );
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-blue-500 selection:text-white">
