@@ -9,45 +9,34 @@ export const AuthProvider = ({ children }) => {
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const [debugInfo, setDebugInfo] = useState("Initializing Auth...");
-
     useEffect(() => {
         let mounted = true;
 
-        // Debug: Log config presence
-        const url = import.meta.env.VITE_SUPABASE_URL;
-        const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-        setDebugInfo(prev => prev + `\nEnv: URL=${url ? 'OK' : 'MISSING'}, KEY=${key ? 'OK' : 'MISSING'}`);
-
-        // Safety Timeout
+        // Safety Timeout: Force stop loading after 5s if Supabase doesn't respond
         const timer = setTimeout(() => {
             if (mounted && loading) {
-                setDebugInfo(prev => prev + "\nTIMEOUT: Supabase did not respond in 5s. Forcing load.");
+                console.warn("Auth timeout - Forcing app load");
                 setLoading(false);
             }
         }, 5000);
 
-        supabase.auth.getSession().then(({ data, error }) => {
+        // Check active session
+        supabase.auth.getSession().then(({ data: { session } }) => {
             if (!mounted) return;
-            if (error) {
-                setDebugInfo(prev => prev + `\nError getting session: ${error.message}`);
-                console.error("Auth Session Error:", error);
+            setUser(session?.user ?? null);
+            if (session?.user) {
+                fetchProfile(session.user.id);
             } else {
-                setDebugInfo(prev => prev + `\nSession Check: ${data.session ? 'Found User' : 'No User'}`);
-                setUser(data?.session?.user ?? null);
-                if (data?.session?.user) {
-                    fetchProfile(data.session.user.id);
-                } else {
-                    setLoading(false);
-                }
+                setLoading(false);
             }
         }).catch(err => {
-            if (mounted) setDebugInfo(prev => prev + `\nCRITICAL FAIL: ${err.message}`);
+            console.error("Session check failed:", err);
+            if (mounted) setLoading(false);
         });
 
+        // Listen for changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (!mounted) return;
-            // setDebugInfo(prev => prev + `\nAuth Event: ${event}`); // Verbose
             setUser(session?.user ?? null);
             if (session?.user) {
                 await fetchProfile(session.user.id);
@@ -111,11 +100,10 @@ export const AuthProvider = ({ children }) => {
     return (
         <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut }}>
             {loading ? (
-                <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white p-4 font-mono text-xs">
-                    <Loader2 className="animate-spin mb-4" size={32} />
-                    <p className="mb-4 text-xl font-bold">Loading Application...</p>
-                    <div className="bg-slate-900 border border-slate-800 p-4 rounded max-w-lg w-full whitespace-pre-wrap text-slate-400">
-                        {debugInfo}
+                <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
+                    <div className="flex flex-col items-center gap-4">
+                        <Loader2 className="animate-spin text-blue-500" size={40} />
+                        <p className="text-slate-400 text-sm tracking-widest uppercase animate-pulse">Initializing System...</p>
                     </div>
                 </div>
             ) : children}
