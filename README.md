@@ -1,0 +1,6 @@
+# clai-project-landing
+CLAI Project - Landing Page & AI ArchitectureBienvenido al repositorio oficial de CLAI Project, un estudio independiente de ingeniería de software enfocado en la creación de herramientas narrativas y ecosistemas digitales robustos.🚀 TecnologíasEste proyecto utiliza el stack Antigravity:Frontend: React 19 + Vite 7 + Tailwind CSS v4.IA: Integración nativa con la API de Gemini para consultas técnicas y asistencia creativa.Iconografía: Lucide React.🛠️ Estructura del Proyectosrc/App.jsx: Componente principal con la lógica de la landing y la integración de IA.src/main.jsx: Punto de entrada de React.index.html: Estructura base con carga de fuentes y Tailwind CDN.💻 Instalación LocalSi deseas clonar este proyecto y ejecutarlo en tu máquina:Clona el repositorio:git clone [https://github.com/tu-usuario/clai-project-landing.git](https://github.com/tu-usuario/clai-project-landing.git)
+Entra a la carpeta:cd clai-project-landing
+Instala las dependencias:npm install
+Inicia el servidor de desarrollo:npm run dev
+🌐 DespliegueEste proyecto está optimizado para desplegarse en Vercel de forma instantánea simplemente conectando este repositorio de GitHub.Hecho con pasión por la tecnología y la narrativa digital.LinkedIn | YouTube
