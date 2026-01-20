@@ -1,4 +1,8 @@
+import React from 'react';
 import { Link } from 'react-router-dom';
+import { Film, Theater, BookOpen, Cpu, Sparkles, ShoppingBag } from 'lucide-react';
+import { LINKS } from '../constants';
+import { motion } from 'framer-motion';
 
 const SoftwareSection = () => {
     return (
