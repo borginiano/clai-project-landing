@@ -33,12 +33,12 @@ const Hero = () => {
                     Caos Leitmotiv Artificial Intelligence
                 </motion.h2>
                 <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.8, delay: 0.5 }}
-                    className="max-w-2xl mx-auto text-lg text-slate-400 mb-10 leading-relaxed font-light italic text-balance"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="text-xl md:text-2xl text-slate-400 font-light max-w-2xl mx-auto leading-relaxed"
                 >
-                    "Construyendo la infraestructura invisible del futuro creativo."
+                    Desarrollando con IA, como extensión de la creatividad.
                 </motion.p>
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

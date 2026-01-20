@@ -26,11 +26,11 @@ const Navbar = () => {
                     <span className="text-xl font-bold tracking-tight hidden sm:block font-mono uppercase">CLAI Engine</span>
                 </div>
                 <div className="hidden lg:flex items-center gap-8 text-sm font-medium">
-                    <a href="#status" className="text-slate-400 hover:text-blue-400 transition-colors uppercase text-xs tracking-widest font-bold">Estatus</a>
-                    <a href="#aoreana" className="text-slate-400 hover:text-blue-400 transition-colors uppercase font-black tracking-tighter text-sm">Aoreana</a>
-                    <a href="#ecosistema" className="text-slate-400 hover:text-blue-400 transition-colors uppercase text-xs tracking-widest font-bold">Ecosistema</a>
-                    <a href="#cinema" className="text-slate-400 hover:text-blue-400 transition-colors uppercase text-xs tracking-widest font-bold">IA Cinema</a>
-                    <a href="#software" className="text-slate-400 hover:text-blue-400 transition-colors uppercase text-xs tracking-widest font-bold">Software</a>
+                    <a href="/#status" className="text-slate-400 hover:text-blue-400 transition-colors uppercase text-xs tracking-widest font-bold">Estatus</a>
+                    <a href="/#aoreana" className="text-slate-400 hover:text-blue-400 transition-colors uppercase font-black tracking-tighter text-sm">Aoreana</a>
+                    <a href="/#ecosistema" className="text-slate-400 hover:text-blue-400 transition-colors uppercase text-xs tracking-widest font-bold">Ecosistema</a>
+                    <a href="/#cinema" className="text-slate-400 hover:text-blue-400 transition-colors uppercase text-xs tracking-widest font-bold">IA Cinema</a>
+                    <a href="/#software" className="text-slate-400 hover:text-blue-400 transition-colors uppercase text-xs tracking-widest font-bold">Software</a>
                     <div className="h-4 w-px bg-slate-800 mx-2"></div>
                     <a href={LINKS.linkedin} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-white transition-all hover:scale-110"><Linkedin size={18} /></a>
                     <a href={LINKS.youtube} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-white transition-all hover:scale-110"><Youtube size={18} /></a>
