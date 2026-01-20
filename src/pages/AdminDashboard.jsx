@@ -45,36 +45,43 @@ const AdminDashboard = () => {
     };
 
     const handleSave = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
 
-        // Parse complex fields
+        // Basic Validation
+        if (!formData.title || !formData.slug) {
+            alert("Title and Slug are required!");
+            return;
+        }
+
         const formattedData = {
             ...formData,
-            tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : [],
-            gallery: formData.gallery ? formData.gallery.split(',').map(img => img.trim()) : [],
-            features: formData.features ? formData.features.split('\n').filter(f => f.trim() !== '') : [] // Split by newline
+            tags: formData.tags ? (typeof formData.tags === 'string' ? formData.tags.split(',').map(tag => tag.trim()) : formData.tags) : [],
+            gallery: formData.gallery ? (typeof formData.gallery === 'string' ? formData.gallery.split(',').map(img => img.trim()) : formData.gallery) : [],
+            features: formData.features ? (typeof formData.features === 'string' ? formData.features.split('\n').filter(f => f.trim() !== '') : formData.features) : []
         };
 
-        const { error } = await supabase.from('modules').upsert([formattedData]); // upsert to handle updates if id matches (though here we might be inserting new always if no ID, wait upsert needs primary key)
+        // Remove ID if present for insert, but keep for update logic check
+        const { id, ...dataToSave } = formattedData;
 
-        // Correct Upsert Logic: Check if we are updating (by title or slug? no unique ID is best). 
-        // For simple Admin MVP, let's just use INSERT for NEW and DELETE/RE-INSERT or separate UPDATE for edit. 
-        // But to keep it simple with the previous logic:
+        try {
+            let error;
+            if (id) {
+                // Update existing
+                const result = await supabase.from('modules').update(dataToSave).eq('id', id);
+                error = result.error;
+            } else {
+                // Insert new
+                const result = await supabase.from('modules').insert([dataToSave]);
+                error = result.error;
+            }
 
-        // LET'S IMPROVE: If editing existing, we need ID.
-        // For now, let's assume we are creating NEW only in this form version or overwriting based on ID if we added it to state.
-        // Actually, the previous version only did INSERT. I will stick to INSERT for now but add ID to formData if I was editing (which I haven't implemented "Edit" button yet, only "Add").
-        // Wait, I see "Edit" icon in import but not used. I will implement Edit functionality now.
+            if (error) throw error;
 
-        if (formData.id) {
-            const { error } = await supabase.from('modules').update(formattedData).eq('id', formData.id);
-            if (error) alert(error.message);
-            else finalizeSave();
-        } else {
-            const { id, ...insertData } = formattedData; // Remove undefined ID
-            const { error } = await supabase.from('modules').insert([insertData]);
-            if (error) alert(error.message);
-            else finalizeSave();
+            alert("Project Saved Successfully! 🚀");
+            finalizeSave();
+        } catch (err) {
+            console.error("Save Error:", err);
+            alert(`Error Saving: ${err.message}`);
         }
     };
 
