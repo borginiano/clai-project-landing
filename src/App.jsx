@@ -1,25 +1,22 @@
 import React from 'react';
-import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import AoreanaSection from './components/AoreanaSection';
-import StatusSection from './components/StatusSection';
-import CinemaSection from './components/CinemaSection';
-import EcosystemSection from './components/EcosystemSection';
-import SoftwareSection from './components/SoftwareSection';
-import Footer from './components/Footer';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import Home from './pages/Home';
+import Auth from './pages/Auth';
+import AdminDashboard from './pages/AdminDashboard';
 
 const App = () => {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-blue-500 selection:text-white">
-      <Navbar />
-      <Hero />
-      <AoreanaSection />
-      <StatusSection />
-      <CinemaSection />
-      <EcosystemSection />
-      <SoftwareSection />
-      <Footer />
-    </div>
+    <Router>
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AuthProvider>
+    </Router>
   );
 };
 

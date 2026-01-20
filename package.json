@@ -9,10 +9,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.90.1",
     "framer-motion": "^12.27.1",
     "lucide-react": "^0.463.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.12.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
