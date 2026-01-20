@@ -6,10 +6,10 @@ import { LayoutGrid, Plus, Trash2, Edit, Save, X, Loader2, LogOut } from 'lucide
 import { motion } from 'framer-motion';
 
 const AdminDashboard = () => {
-    const { user, profile, signOut } = useAuth();
+    const { user, profile, loading: authLoading, signOut } = useAuth(); // Import loading from AuthContext
     const navigate = useNavigate();
     const [modules, setModules] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [modulesLoading, setModulesLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
 
     // Form State
@@ -23,17 +23,20 @@ const AdminDashboard = () => {
     });
 
     useEffect(() => {
-        if (profile && profile.role !== 'admin') {
-            navigate('/'); // Redirect non-admins
+        if (!authLoading) {
+            if (!user || (profile && profile.role !== 'admin')) {
+                navigate('/');
+            } else {
+                fetchModules();
+            }
         }
-        fetchModules();
-    }, [profile, navigate]);
+    }, [user, profile, authLoading, navigate]);
 
     const fetchModules = async () => {
         const { data, error } = await supabase.from('modules').select('*').order('created_at', { ascending: false });
         if (error) console.error(error);
         else setModules(data);
-        setLoading(false);
+        setModulesLoading(false);
     };
 
     const handleSave = async (e) => {
@@ -64,7 +67,13 @@ const AdminDashboard = () => {
         navigate('/');
     };
 
-    if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white"><Loader2 className="animate-spin" /></div>;
+    // Show loading if Auth is loading or Modules are loading (initially)
+    if (authLoading || (modulesLoading && user && profile?.role === 'admin')) {
+        return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white"><Loader2 className="animate-spin" /></div>;
+    }
+
+    // If still here after loading and no admin, return null (redirection will handle it, but preventing flash)
+    if (!user || profile?.role !== 'admin') return null;
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200">
